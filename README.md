@@ -3,7 +3,7 @@
 App de Android para rutinas de ejercicio, con la pantalla dividida en dos contadores sincronizados:
 
 - **Arriba – Tiempo total** de la rutina.
-- **Abajo – Bloques** de **15, 25 o 30 segundos** que se repiten solos.
+- **Abajo – Bloques** que se repiten solos. La duración de cada bloque se elige en minutos (de 1 a 60) con − y +.
 
 ## Botones
 
@@ -17,16 +17,20 @@ Tocar los números grandes también inicia o pausa.
 
 ## Ejercicios (círculos 1 a 5)
 
-Antes de empezar se elige cuántos ejercicios distintos tiene la rutina:
+Antes de empezar se elige la duración del bloque y cuántos ejercicios distintos tiene la rutina:
 
-- **1 ejercicio:** cada bloque terminado cambia el fondo entre **turquesa** y **verde oscuro**, para ver fácil cuándo cambiar la intensidad. Cada bloque cuenta como una ronda.
-- **2 a 5 ejercicios:** cada bloque es el ejercicio siguiente, con su propio color (turquesa, verde oscuro, amarillo, rosa, violeta). La ronda se completa al terminar el último ejercicio.
+- **1 ejercicio:** cada bloque terminado cambia el fondo entre **turquesa** y **turquesa 15 % más oscuro**, para ver fácil cuándo cambiar la intensidad. Cada bloque cuenta como una ronda.
+- **2 a 5 ejercicios:** cada bloque es el ejercicio siguiente, con su propio color (turquesa, turquesa oscuro, amarillo, rosa, violeta). La ronda se completa al terminar el último ejercicio.
 
 Los textos, números y botones cambian de color para leerse bien sobre cada fondo.
 
 ## Al finalizar
 
 La mitad de arriba muestra los dos cronómetros uno al lado del otro y debajo el detalle: tiempo total y rondas. Con ▶ arranca una rutina nueva.
+
+## Historial (menú ☰)
+
+El botón ☰ de arriba a la derecha abre un panel con todas las rutinas finalizadas, agrupadas por día (Hoy, Ayer, fecha) con horario de inicio y fin, tiempo total y rondas. Cada una se puede eliminar con el ícono de papelera.
 
 ## Avisos
 
