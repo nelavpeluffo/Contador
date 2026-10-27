@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Mitad de abajo (intervalos) -->
+    <path
+        android:fillColor="#2DD4BF"
+        android:pathData="M32,58 A22,22 0 0,0 76,58 Z" />
+    <!-- Mitad de arriba (total) -->
+    <path
+        android:fillColor="#60A5FA"
+        android:pathData="M32,58 A22,22 0 0,1 76,58 Z" />
+    <!-- Aro -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="5"
+        android:fillColor="#00000000"
+        android:pathData="M54,36 A22,22 0 1,1 54,80 A22,22 0 1,1 54,36 Z" />
+    <!-- Botón superior -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M48,26 H60 V32 H48 Z" />
+    <!-- División -->
+    <path
+        android:strokeColor="#0B0E13"
+        android:strokeWidth="3"
+        android:pathData="M33,58 H75" />
+</vector>

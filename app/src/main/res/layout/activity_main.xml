@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <!-- ===== MITAD SUPERIOR: tiempo total ===== -->
+    <LinearLayout
+        android:id="@+id/topHalf"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="@color/top_bg"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:paddingStart="24dp"
+        android:paddingTop="20dp"
+        android:paddingEnd="24dp"
+        android:paddingBottom="20dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:letterSpacing="0.2"
+            android:text="TIEMPO TOTAL"
+            android:textColor="@color/muted"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/totalTime"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:autoSizeMaxTextSize="120sp"
+            android:autoSizeMinTextSize="40sp"
+            android:autoSizeTextType="uniform"
+            android:fontFamily="sans-serif-light"
+            android:fontFeatureSettings="tnum"
+            android:gravity="center"
+            android:maxLines="1"
+            android:text="00:00"
+            android:textColor="#FFFFFF" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/totalStart"
+                style="@style/PillButton"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:text="INICIAR" />
+
+            <TextView
+                android:id="@+id/totalReset"
+                style="@style/PillButton"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:text="REINICIAR" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="2dp"
+        android:background="#000000" />
+
+    <!-- ===== MITAD INFERIOR: intervalos ===== -->
+    <LinearLayout
+        android:id="@+id/bottomHalf"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:paddingStart="24dp"
+        android:paddingTop="16dp"
+        android:paddingEnd="24dp"
+        android:paddingBottom="20dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/sideLabel"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:letterSpacing="0.15"
+                android:text="EJERCICIO A"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/roundLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:letterSpacing="0.15"
+                android:text="RONDA 1"
+                android:textColor="#CCFFFFFF"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/intervalTime"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:autoSizeMaxTextSize="180sp"
+            android:autoSizeMinTextSize="48sp"
+            android:autoSizeTextType="uniform"
+            android:fontFamily="sans-serif-medium"
+            android:fontFeatureSettings="tnum"
+            android:gravity="center"
+            android:maxLines="1"
+            android:text="30"
+            android:textColor="#FFFFFF" />
+
+        <ProgressBar
+            android:id="@+id/intervalProgress"
+            style="@android:style/Widget.Material.ProgressBar.Horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="8dp"
+            android:layout_marginBottom="14dp"
+            android:max="1000"
+            android:progress="1000" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/sel15"
+                style="@style/PillButton"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="6dp"
+                android:text="15 s" />
+
+            <TextView
+                android:id="@+id/sel25"
+                style="@style/PillButton"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_marginStart="6dp"
+                android:layout_marginEnd="6dp"
+                android:text="25 s" />
+
+            <TextView
+                android:id="@+id/sel30"
+                style="@style/PillButton"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_marginStart="6dp"
+                android:text="30 s" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/intervalStart"
+                style="@style/PillButton"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:text="INICIAR" />
+
+            <TextView
+                android:id="@+id/intervalReset"
+                style="@style/PillButton"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:text="REINICIAR" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>
