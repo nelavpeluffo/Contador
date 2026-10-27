@@ -1,6 +1,7 @@
 package com.nelavpeluffo.contador;
 
 import android.app.Activity;
+import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
@@ -13,67 +14,81 @@ import android.os.Looper;
 import android.os.SystemClock;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
+import android.view.Gravity;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import java.util.Locale;
 
 /**
- * Pantalla dividida en dos:
- *  - Arriba: cronómetro del tiempo total de la rutina.
- *  - Abajo: temporizador de intervalos (15 / 25 / 30 s) que se repite solo,
- *    alterna entre "Ejercicio A" y "Ejercicio B" y cuenta las rondas.
+ * Pantalla dividida en dos contadores sincronizados:
+ *  - Arriba: tiempo total de la rutina.
+ *  - Abajo: bloques de 15 / 25 / 30 s que se repiten solos.
+ *
+ * Con 1 ejercicio, cada bloque alterna el fondo turquesa / verde oscuro.
+ * Con 2 a 5 ejercicios, cada bloque es el ejercicio siguiente (cada uno con su color)
+ * y una ronda se completa al terminar el último.
  */
 public class MainActivity extends Activity {
 
     private static final long TICK_MS = 50;
 
+    private static final int IDLE = 0, RUNNING = 1, PAUSED = 2, FINISHED = 3;
+
+    // Fondo y color de texto de cada bloque. 0 = turquesa, 1 = verde oscuro.
+    private static final int[] BLOCK_BG = {0xFF2DD4BF, 0xFF0F5132, 0xFFFBBF24, 0xFFFB7185, 0xFF7C3AED};
+    private static final int[] BLOCK_FG = {0xFF042F2B, 0xFFFFFFFF, 0xFF2B1B00, 0xFF3B0A14, 0xFFFFFFFF};
+
     private static final int TOTAL_ACCENT = 0xFF60A5FA;
-    private static final int ACCENT_A = 0xFF2DD4BF;
-    private static final int ACCENT_B = 0xFFFBBF24;
-    private static final int BG_A = 0xFF0E2A28;
-    private static final int BG_B = 0xFF2D230E;
-    private static final int DARK_TEXT = 0xFF0B0E13;
+    private static final int DARK = 0xFF0B0E13;
     private static final int WHITE = 0xFFFFFFFF;
-    private static final int OUTLINE = 0x55FFFFFF;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable ticker = new Runnable() {
         @Override
         public void run() {
             tick();
-            if (totalRunning || intervalRunning) {
+            if (state == RUNNING) {
                 handler.postDelayed(this, TICK_MS);
             }
         }
     };
 
-    // --- Estado: tiempo total ---
-    private boolean totalRunning;
+    // --- Configuración ---
+    private int intervalSec = 30;
+    private int exercises = 1;
+
+    // --- Estado compartido ---
+    private int state = IDLE;
     private long totalAccumMs;
     private long totalStartedAt;
-
-    // --- Estado: intervalos ---
-    private int intervalSec = 30;
-    private boolean intervalRunning;
-    private long intervalRemainingMs = 30_000;
-    private long intervalEndsAt;
-    private int round = 1;
-    private boolean sideA = true;
+    private long blockRemainingMs = 30_000;
+    private long blockEndsAt;
+    private int blocksDone;
     private long lastBeepSecond = -1;
 
     // --- Vistas ---
-    private TextView totalTime, totalStart, totalReset;
-    private TextView intervalTime, intervalStart, intervalReset, sideLabel, roundLabel;
-    private TextView sel15, sel25, sel30;
-    private View bottomHalf;
+    private View topRunning, topSummary, bottomHalf, configBox;
+    private TextView totalTime, intervalTime, exerciseLabel, roundLabel;
+    private TextView summaryTotal, summaryInterval, detailTotal, detailRounds, detailConfig;
+    private TextView captionSeconds, captionExercises;
+    private TextView[] secChips;
+    private final TextView[] exCircles = new TextView[5];
+    private ImageView totalPlay, totalStop, intervalPlay, intervalStop, intervalReset;
     private ProgressBar intervalProgress;
+
+    private int renderedColor = -1;
+    private int renderedState = -1;
+    private boolean playShowsPause;
 
     private ToneGenerator tone;
     private Vibrator vibrator;
     private float density;
+    private SharedPreferences prefs;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -82,31 +97,55 @@ public class MainActivity extends Activity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         density = getResources().getDisplayMetrics().density;
 
-        totalTime = findViewById(R.id.totalTime);
-        totalStart = findViewById(R.id.totalStart);
-        totalReset = findViewById(R.id.totalReset);
-        intervalTime = findViewById(R.id.intervalTime);
-        intervalStart = findViewById(R.id.intervalStart);
-        intervalReset = findViewById(R.id.intervalReset);
-        sideLabel = findViewById(R.id.sideLabel);
-        roundLabel = findViewById(R.id.roundLabel);
-        sel15 = findViewById(R.id.sel15);
-        sel25 = findViewById(R.id.sel25);
-        sel30 = findViewById(R.id.sel30);
+        prefs = getSharedPreferences("config", MODE_PRIVATE);
+        intervalSec = prefs.getInt("intervalSec", 30);
+        exercises = prefs.getInt("exercises", 1);
+        blockRemainingMs = intervalSec * 1000L;
+
+        topRunning = findViewById(R.id.topRunning);
+        topSummary = findViewById(R.id.topSummary);
         bottomHalf = findViewById(R.id.bottomHalf);
+        configBox = findViewById(R.id.configBox);
+        totalTime = findViewById(R.id.totalTime);
+        intervalTime = findViewById(R.id.intervalTime);
+        exerciseLabel = findViewById(R.id.exerciseLabel);
+        roundLabel = findViewById(R.id.roundLabel);
+        summaryTotal = findViewById(R.id.summaryTotal);
+        summaryInterval = findViewById(R.id.summaryInterval);
+        detailTotal = findViewById(R.id.detailTotal);
+        detailRounds = findViewById(R.id.detailRounds);
+        detailConfig = findViewById(R.id.detailConfig);
+        captionSeconds = findViewById(R.id.captionSeconds);
+        captionExercises = findViewById(R.id.captionExercises);
+        totalPlay = findViewById(R.id.totalPlay);
+        totalStop = findViewById(R.id.totalStop);
+        intervalPlay = findViewById(R.id.intervalPlay);
+        intervalStop = findViewById(R.id.intervalStop);
+        intervalReset = findViewById(R.id.intervalReset);
         intervalProgress = findViewById(R.id.intervalProgress);
+        secChips = new TextView[]{findViewById(R.id.sel15), findViewById(R.id.sel25), findViewById(R.id.sel30)};
 
-        totalStart.setOnClickListener(v -> toggleTotal());
-        totalTime.setOnClickListener(v -> toggleTotal());
-        totalReset.setOnClickListener(v -> resetTotal());
+        buildExerciseCircles();
 
-        intervalStart.setOnClickListener(v -> toggleInterval());
-        intervalTime.setOnClickListener(v -> toggleInterval());
-        intervalReset.setOnClickListener(v -> resetInterval());
+        // Los dos contadores comparten play/pausa y finalizar.
+        totalPlay.setOnClickListener(v -> togglePlay());
+        intervalPlay.setOnClickListener(v -> togglePlay());
+        totalTime.setOnClickListener(v -> togglePlay());
+        intervalTime.setOnClickListener(v -> togglePlay());
+        totalStop.setOnClickListener(v -> finishRoutine(true));
+        intervalStop.setOnClickListener(v -> finishRoutine(true));
+        intervalReset.setOnClickListener(v -> resetBlock());
 
-        sel15.setOnClickListener(v -> selectInterval(15));
-        sel25.setOnClickListener(v -> selectInterval(25));
-        sel30.setOnClickListener(v -> selectInterval(30));
+        int[] options = {15, 25, 30};
+        for (int i = 0; i < 3; i++) {
+            final int sec = options[i];
+            secChips[i].setOnClickListener(v -> selectSeconds(sec));
+        }
+
+        totalPlay.setBackground(pill(TOTAL_ACCENT, 0));
+        totalPlay.setImageTintList(ColorStateList.valueOf(DARK));
+        totalStop.setBackground(pill(0, 0x55FFFFFF));
+        totalStop.setImageTintList(ColorStateList.valueOf(WHITE));
 
         try {
             tone = new ToneGenerator(AudioManager.STREAM_MUSIC, 100);
@@ -119,13 +158,30 @@ public class MainActivity extends Activity {
             restore(savedInstanceState);
         }
 
-        totalStart.setBackground(pill(TOTAL_ACCENT, 0));
-        totalStart.setTextColor(DARK_TEXT);
-        totalReset.setBackground(pill(0, OUTLINE));
-
-        applyIntervalColors();
         render();
         ensureTicking();
+    }
+
+    private void buildExerciseCircles() {
+        LinearLayout row = findViewById(R.id.exerciseRow);
+        int size = Math.round(40 * density);
+        for (int i = 0; i < 5; i++) {
+            final int n = i + 1;
+            TextView c = new TextView(this);
+            c.setText(String.valueOf(n));
+            c.setGravity(Gravity.CENTER);
+            c.setTextSize(16);
+            c.setTypeface(c.getTypeface(), android.graphics.Typeface.BOLD);
+            c.setClickable(true);
+            c.setFocusable(true);
+            c.setContentDescription(n == 1 ? "1 ejercicio" : n + " ejercicios");
+            c.setOnClickListener(v -> selectExercises(n));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, size, 1f);
+            lp.leftMargin = Math.round(3 * density);
+            lp.rightMargin = Math.round(3 * density);
+            row.addView(c, lp);
+            exCircles[i] = c;
+        }
     }
 
     @Override
@@ -144,69 +200,72 @@ public class MainActivity extends Activity {
         super.onDestroy();
     }
 
-    // ================= Tiempo total =================
+    // ================= Acciones =================
 
-    private void toggleTotal() {
+    /** Play/pausa: siempre afecta a los dos contadores juntos. */
+    private void togglePlay() {
         long now = SystemClock.elapsedRealtime();
-        if (totalRunning) {
+        if (state == RUNNING) {
             totalAccumMs += now - totalStartedAt;
-            totalRunning = false;
+            blockRemainingMs = Math.max(0, blockEndsAt - now);
+            state = PAUSED;
         } else {
-            totalStartedAt = now;
-            totalRunning = true;
-        }
-        ensureTicking();
-        render();
-    }
-
-    private void resetTotal() {
-        totalRunning = false;
-        totalAccumMs = 0;
-        render();
-    }
-
-    private long totalElapsed(long now) {
-        return totalAccumMs + (totalRunning ? now - totalStartedAt : 0);
-    }
-
-    // ================= Intervalos =================
-
-    private void toggleInterval() {
-        long now = SystemClock.elapsedRealtime();
-        if (intervalRunning) {
-            intervalRemainingMs = Math.max(0, intervalEndsAt - now);
-            intervalRunning = false;
-        } else {
-            intervalEndsAt = now + intervalRemainingMs;
-            intervalRunning = true;
-            // Al arrancar los intervalos, arranca también el tiempo total.
-            if (!totalRunning) {
-                totalStartedAt = now;
-                totalRunning = true;
+            if (state == IDLE || state == FINISHED) {
+                // Rutina nueva desde cero.
+                totalAccumMs = 0;
+                blocksDone = 0;
+                blockRemainingMs = intervalSec * 1000L;
+                lastBeepSecond = -1;
             }
+            totalStartedAt = now;
+            blockEndsAt = now + blockRemainingMs;
+            state = RUNNING;
         }
         ensureTicking();
         render();
     }
 
-    private void resetInterval() {
-        intervalRunning = false;
-        intervalRemainingMs = intervalSec * 1000L;
-        round = 1;
-        sideA = true;
-        lastBeepSecond = -1;
-        applyIntervalColors();
+    /** Finalizar: detiene los dos contadores y muestra el resumen. */
+    private void finishRoutine(boolean withSound) {
+        if (state != RUNNING && state != PAUSED) return;
+        long now = SystemClock.elapsedRealtime();
+        if (state == RUNNING) {
+            totalAccumMs += now - totalStartedAt;
+            blockRemainingMs = Math.max(0, blockEndsAt - now);
+        }
+        state = FINISHED;
+        handler.removeCallbacks(ticker);
+        if (withSound) {
+            beep(ToneGenerator.TONE_PROP_ACK, 400);
+        }
         render();
     }
 
-    private void selectInterval(int seconds) {
-        intervalSec = seconds;
-        intervalRemainingMs = seconds * 1000L;
-        lastBeepSecond = -1;
-        if (intervalRunning) {
-            intervalEndsAt = SystemClock.elapsedRealtime() + intervalRemainingMs;
+    /** Reiniciar solo el bloque de abajo; el tiempo total sigue. */
+    private void resetBlock() {
+        if (state != RUNNING && state != PAUSED) return;
+        blockRemainingMs = intervalSec * 1000L;
+        if (state == RUNNING) {
+            blockEndsAt = SystemClock.elapsedRealtime() + blockRemainingMs;
         }
-        applyIntervalColors();
+        lastBeepSecond = -1;
+        render();
+    }
+
+    private void selectSeconds(int sec) {
+        if (state == RUNNING || state == PAUSED) return;
+        intervalSec = sec;
+        blockRemainingMs = sec * 1000L;
+        prefs.edit().putInt("intervalSec", sec).apply();
+        renderedColor = -1;
+        render();
+    }
+
+    private void selectExercises(int n) {
+        if (state == RUNNING || state == PAUSED) return;
+        exercises = n;
+        prefs.edit().putInt("exercises", n).apply();
+        renderedColor = -1;
         render();
     }
 
@@ -214,82 +273,170 @@ public class MainActivity extends Activity {
 
     private void ensureTicking() {
         handler.removeCallbacks(ticker);
-        if (totalRunning || intervalRunning) {
+        if (state == RUNNING) {
             handler.post(ticker);
         }
     }
 
     private void tick() {
+        if (state != RUNNING) return;
         long now = SystemClock.elapsedRealtime();
-        if (intervalRunning) {
-            long remaining = intervalEndsAt - now;
-            if (remaining <= 0) {
-                long len = intervalSec * 1000L;
-                while (remaining <= 0) {
-                    intervalEndsAt += len;
-                    remaining += len;
-                    round++;
-                    sideA = !sideA;
-                }
-                lastBeepSecond = -1;
-                signalIntervalEnd();
-                applyIntervalColors();
-            } else {
-                long sec = (remaining + 999) / 1000;
-                if (sec <= 3 && sec != lastBeepSecond) {
-                    lastBeepSecond = sec;
-                    beep(ToneGenerator.TONE_PROP_BEEP, 150);
-                }
+        long remaining = blockEndsAt - now;
+        if (remaining <= 0) {
+            long len = intervalSec * 1000L;
+            boolean roundDone = false;
+            while (remaining <= 0) {
+                blockEndsAt += len;
+                remaining += len;
+                blocksDone++;
+                if (blocksDone % exercises == 0) roundDone = true;
+            }
+            lastBeepSecond = -1;
+            signalBlockEnd(roundDone && exercises > 1);
+        } else {
+            long sec = (remaining + 999) / 1000;
+            if (sec <= 3 && sec != lastBeepSecond) {
+                lastBeepSecond = sec;
+                beep(ToneGenerator.TONE_PROP_BEEP, 150);
             }
         }
         render();
     }
 
+    // ================= Pantalla =================
+
+    private boolean active() {
+        return state == RUNNING || state == PAUSED;
+    }
+
+    /** Índice de color del bloque actual. */
+    private int colorIndex() {
+        if (!active()) return 0;
+        if (exercises == 1) return blocksDone % 2;
+        return blocksDone % exercises;
+    }
+
     private void render() {
         long now = SystemClock.elapsedRealtime();
+        boolean active = active();
 
-        long total = totalElapsed(now);
-        totalTime.setText(formatTotal(total));
-        totalStart.setText(totalRunning ? "PAUSA" : (total > 0 ? "SEGUIR" : "INICIAR"));
+        // --- Arriba ---
+        long total = totalAccumMs + (state == RUNNING ? now - totalStartedAt : 0);
+        if (state != renderedState) {
+            topRunning.setVisibility(state == FINISHED ? View.GONE : View.VISIBLE);
+            topSummary.setVisibility(state == FINISHED ? View.VISIBLE : View.GONE);
+            configBox.setVisibility(active ? View.GONE : View.VISIBLE);
+            setEnabled(totalStop, active);
+            setEnabled(intervalStop, active);
+            setEnabled(intervalReset, active);
+            if (state == FINISHED) fillSummary();
+        }
+        totalTime.setText(formatTime(total));
 
-        long remaining = intervalRunning ? Math.max(0, intervalEndsAt - now) : intervalRemainingMs;
+        boolean showPause = state == RUNNING;
+        if (showPause != playShowsPause || state != renderedState) {
+            playShowsPause = showPause;
+            int icon = showPause ? R.drawable.ic_pause : R.drawable.ic_play;
+            totalPlay.setImageResource(icon);
+            intervalPlay.setImageResource(icon);
+        }
+
+        // --- Abajo ---
         long len = intervalSec * 1000L;
+        long remaining = state == RUNNING ? Math.max(0, blockEndsAt - now)
+                : (active ? blockRemainingMs : len);
         intervalTime.setText(String.valueOf((remaining + 999) / 1000));
         intervalProgress.setProgress((int) (1000 * remaining / len));
-        boolean fresh = !intervalRunning && remaining == len && round == 1;
-        intervalStart.setText(intervalRunning ? "PAUSA" : (fresh ? "INICIAR" : "SEGUIR"));
-        sideLabel.setText(sideA ? "EJERCICIO A" : "EJERCICIO B");
-        roundLabel.setText(String.format(Locale.US, "RONDA %d", round));
+
+        if (active) {
+            int ex = blocksDone % exercises + 1;
+            int round = blocksDone / exercises + 1;
+            exerciseLabel.setText(exercises > 1
+                    ? String.format(Locale.US, "EJERCICIO %d/%d", ex, exercises)
+                    : String.format(Locale.US, "BLOQUE %d", blocksDone + 1));
+            roundLabel.setText(String.format(Locale.US, "RONDA %d", round));
+        } else {
+            exerciseLabel.setText(state == FINISHED ? "NUEVA RUTINA" : "PREPARADO");
+            roundLabel.setText("");
+        }
+
+        int color = colorIndex();
+        if (color != renderedColor || state != renderedState) {
+            applyBottomColors(color);
+            renderedColor = color;
+        }
+        renderedState = state;
     }
 
-    /** Colores que dependen del lado (A/B) y del intervalo elegido. */
-    private void applyIntervalColors() {
-        int accent = sideA ? ACCENT_A : ACCENT_B;
-        bottomHalf.setBackgroundColor(sideA ? BG_A : BG_B);
-        sideLabel.setTextColor(accent);
-        intervalProgress.setProgressTintList(ColorStateList.valueOf(accent));
-        intervalProgress.setProgressBackgroundTintList(ColorStateList.valueOf(0x33FFFFFF));
+    private void applyBottomColors(int idx) {
+        int bg = BLOCK_BG[idx];
+        int fg = BLOCK_FG[idx];
+        int fgSoft = withAlpha(fg, 0x66);
 
-        intervalStart.setBackground(pill(accent, 0));
-        intervalStart.setTextColor(DARK_TEXT);
-        intervalReset.setBackground(pill(0, OUTLINE));
+        bottomHalf.setBackgroundColor(bg);
+        intervalTime.setTextColor(fg);
+        exerciseLabel.setTextColor(fg);
+        roundLabel.setTextColor(withAlpha(fg, 0xCC));
+        captionSeconds.setTextColor(withAlpha(fg, 0xB3));
+        captionExercises.setTextColor(withAlpha(fg, 0xB3));
+        intervalProgress.setProgressTintList(ColorStateList.valueOf(fg));
+        intervalProgress.setProgressBackgroundTintList(ColorStateList.valueOf(withAlpha(fg, 0x33)));
 
-        styleChip(sel15, intervalSec == 15, accent);
-        styleChip(sel25, intervalSec == 25, accent);
-        styleChip(sel30, intervalSec == 30, accent);
+        intervalPlay.setBackground(pill(fg, 0));
+        intervalPlay.setImageTintList(ColorStateList.valueOf(bg));
+        intervalStop.setBackground(pill(0, fgSoft));
+        intervalStop.setImageTintList(ColorStateList.valueOf(fg));
+        intervalReset.setBackground(pill(0, fgSoft));
+        intervalReset.setImageTintList(ColorStateList.valueOf(fg));
+
+        int[] options = {15, 25, 30};
+        for (int i = 0; i < 3; i++) {
+            styleOption(secChips[i], options[i] == intervalSec, bg, fg, fgSoft, false);
+        }
+        for (int i = 0; i < 5; i++) {
+            styleOption(exCircles[i], i + 1 == exercises, bg, fg, fgSoft, true);
+        }
     }
 
-    private void styleChip(TextView chip, boolean selected, int accent) {
-        chip.setBackground(selected ? pill(0x33FFFFFF, accent) : pill(0, OUTLINE));
-        chip.setTextColor(selected ? accent : WHITE);
+    private void styleOption(TextView v, boolean selected, int bg, int fg, int fgSoft, boolean circle) {
+        Drawable d = selected ? shape(fg, 0, circle) : shape(0, fgSoft, circle);
+        v.setBackground(d);
+        v.setTextColor(selected ? bg : fg);
+    }
+
+    private void fillSummary() {
+        String total = formatTime(totalAccumMs);
+        int rounds = blocksDone / exercises;
+        int extra = blocksDone % exercises;
+
+        summaryTotal.setText(total);
+        summaryInterval.setText(String.valueOf((blockRemainingMs + 999) / 1000));
+        detailTotal.setText(total);
+        String r = String.valueOf(rounds);
+        if (extra > 0) {
+            r += extra == 1 ? " + 1 ejercicio" : " + " + extra + " ejercicios";
+        }
+        detailRounds.setText(r);
+        detailConfig.setText(String.format(Locale.US, "%d %s de %d s · %d %s completos",
+                exercises, exercises == 1 ? "ejercicio" : "ejercicios", intervalSec,
+                blocksDone, blocksDone == 1 ? "bloque" : "bloques"));
+    }
+
+    private void setEnabled(View v, boolean enabled) {
+        v.setEnabled(enabled);
+        v.setAlpha(enabled ? 1f : 0.3f);
     }
 
     // ================= Avisos =================
 
-    private void signalIntervalEnd() {
+    private void signalBlockEnd(boolean roundDone) {
         beep(ToneGenerator.TONE_PROP_BEEP2, 600);
         if (vibrator != null && vibrator.hasVibrator()) {
-            vibrator.vibrate(VibrationEffect.createOneShot(450, VibrationEffect.DEFAULT_AMPLITUDE));
+            if (roundDone) {
+                vibrator.vibrate(VibrationEffect.createWaveform(new long[]{0, 300, 150, 300}, -1));
+            } else {
+                vibrator.vibrate(VibrationEffect.createOneShot(400, VibrationEffect.DEFAULT_AMPLITUDE));
+            }
         }
     }
 
@@ -304,7 +451,7 @@ public class MainActivity extends Activity {
 
     // ================= Utilidades =================
 
-    private static String formatTotal(long ms) {
+    private static String formatTime(long ms) {
         long s = ms / 1000;
         long h = s / 3600;
         long m = (s % 3600) / 60;
@@ -315,14 +462,26 @@ public class MainActivity extends Activity {
         return String.format(Locale.US, "%02d:%02d", m, sec);
     }
 
-    private Drawable pill(int fill, int stroke) {
-        GradientDrawable shape = new GradientDrawable();
-        shape.setCornerRadius(100 * density);
-        shape.setColor(fill);
-        if (stroke != 0) {
-            shape.setStroke(Math.round(2 * density), stroke);
+    private static int withAlpha(int color, int alpha) {
+        return (color & 0x00FFFFFF) | (alpha << 24);
+    }
+
+    private Drawable shape(int fill, int stroke, boolean circle) {
+        GradientDrawable g = new GradientDrawable();
+        if (circle) {
+            g.setShape(GradientDrawable.OVAL);
+        } else {
+            g.setCornerRadius(100 * density);
         }
-        return new RippleDrawable(ColorStateList.valueOf(0x40FFFFFF), shape, null);
+        g.setColor(fill);
+        if (stroke != 0) {
+            g.setStroke(Math.round(2 * density), stroke);
+        }
+        return new RippleDrawable(ColorStateList.valueOf(0x40FFFFFF), g, null);
+    }
+
+    private Drawable pill(int fill, int stroke) {
+        return shape(fill, stroke, false);
     }
 
     // ================= Guardar / restaurar =================
@@ -330,26 +489,20 @@ public class MainActivity extends Activity {
     @Override
     protected void onSaveInstanceState(Bundle out) {
         super.onSaveInstanceState(out);
-        out.putBoolean("totalRunning", totalRunning);
+        out.putInt("state", state);
         out.putLong("totalAccumMs", totalAccumMs);
         out.putLong("totalStartedAt", totalStartedAt);
-        out.putInt("intervalSec", intervalSec);
-        out.putBoolean("intervalRunning", intervalRunning);
-        out.putLong("intervalRemainingMs", intervalRemainingMs);
-        out.putLong("intervalEndsAt", intervalEndsAt);
-        out.putInt("round", round);
-        out.putBoolean("sideA", sideA);
+        out.putLong("blockRemainingMs", blockRemainingMs);
+        out.putLong("blockEndsAt", blockEndsAt);
+        out.putInt("blocksDone", blocksDone);
     }
 
     private void restore(Bundle in) {
-        totalRunning = in.getBoolean("totalRunning");
+        state = in.getInt("state", IDLE);
         totalAccumMs = in.getLong("totalAccumMs");
         totalStartedAt = in.getLong("totalStartedAt");
-        intervalSec = in.getInt("intervalSec", 30);
-        intervalRunning = in.getBoolean("intervalRunning");
-        intervalRemainingMs = in.getLong("intervalRemainingMs", intervalSec * 1000L);
-        intervalEndsAt = in.getLong("intervalEndsAt");
-        round = in.getInt("round", 1);
-        sideA = in.getBoolean("sideA", true);
+        blockRemainingMs = in.getLong("blockRemainingMs", intervalSec * 1000L);
+        blockEndsAt = in.getLong("blockEndsAt");
+        blocksDone = in.getInt("blocksDone");
     }
 }

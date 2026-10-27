@@ -1,30 +1,40 @@
 # Contador
 
-App de Android para rutinas de ejercicio, con la pantalla dividida en dos:
+App de Android para rutinas de ejercicio, con la pantalla dividida en dos contadores sincronizados:
 
-- **Arriba – Tiempo total:** cronómetro de la rutina completa.
-- **Abajo – Intervalos:** cuenta regresiva de **15, 25 o 30 segundos** que se repite sola. En cada vuelta alterna entre **Ejercicio A** (verde) y **Ejercicio B** (amarillo) y suma una ronda.
+- **Arriba – Tiempo total** de la rutina.
+- **Abajo – Bloques** de **15, 25 o 30 segundos** que se repiten solos.
 
-Detalles:
-- Pitidos en los últimos 3 segundos y pitido largo + vibración al cambiar de intervalo.
-- Al iniciar los intervalos también arranca el tiempo total (si estaba parado).
-- Tocar los números grandes también inicia/pausa.
-- La pantalla no se apaga mientras la app está abierta.
-- El sonido usa el volumen multimedia.
+## Botones
+
+| Símbolo | Acción |
+|---|---|
+| ▶ / ❚❚ | Iniciar / pausar. Inicia o pausa **los dos** contadores. |
+| ■ | Finalizar. Termina **los dos** y muestra el resumen. |
+| ↺ | (solo abajo) Reinicia el bloque actual; el tiempo total sigue. |
+
+Tocar los números grandes también inicia o pausa.
+
+## Ejercicios (círculos 1 a 5)
+
+Antes de empezar se elige cuántos ejercicios distintos tiene la rutina:
+
+- **1 ejercicio:** cada bloque terminado cambia el fondo entre **turquesa** y **verde oscuro**, para ver fácil cuándo cambiar la intensidad. Cada bloque cuenta como una ronda.
+- **2 a 5 ejercicios:** cada bloque es el ejercicio siguiente, con su propio color (turquesa, verde oscuro, amarillo, rosa, violeta). La ronda se completa al terminar el último ejercicio.
+
+Los textos, números y botones cambian de color para leerse bien sobre cada fondo.
+
+## Al finalizar
+
+La mitad de arriba muestra los dos cronómetros uno al lado del otro y debajo el detalle: tiempo total y rondas. Con ▶ arranca una rutina nueva.
+
+## Avisos
+
+Pitidos en los últimos 3 segundos de cada bloque; pitido largo y vibración al cambiar de bloque (doble vibración al completar una ronda). Usa el volumen multimedia. La pantalla no se apaga mientras la app está abierta.
 
 ## Descargar el APK
 
 Desde el celular: **Releases → "Contador (última versión)" → `Contador.apk`**
 (https://github.com/nelavpeluffo/Contador/releases/latest)
 
-Android va a pedir permiso para "instalar apps de origen desconocido" la primera vez. Requiere Android 8.0 o superior.
-
-Cada push a `main` recompila el APK con GitHub Actions y actualiza ese release. Todas las versiones están firmadas con la misma clave, así que se instalan encima sin desinstalar.
-
-## Compilar localmente
-
-```
-./gradlew assembleRelease
-```
-
-El APK queda en `app/build/outputs/apk/release/app-release.apk`.
+Requiere Android 8.0 o superior. Cada push a `main` recompila el APK con GitHub Actions. Todas las versiones usan la misma firma, así que se instalan encima sin desinstalar.
