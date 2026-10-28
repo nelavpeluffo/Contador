@@ -46,7 +46,8 @@ import java.util.Locale;
 public class MainActivity extends Activity {
 
     private static final long TICK_MS = 50;
-    private static final int MIN_BLOCK_MIN = 1, MAX_BLOCK_MIN = 60;
+    private static final int MIN_BLOCK_MIN = 0, MAX_BLOCK_MIN = 60;
+    private static final int[] SEC_OPTIONS = {15, 25, 30, 40};
 
     private static final int IDLE = 0, RUNNING = 1, PAUSED = 2, FINISHED = 3;
 
@@ -77,6 +78,8 @@ public class MainActivity extends Activity {
     // --- Configuración ---
     private int blockMinA = 1;   // Tiempo 1: bloques 1, 3, 5...
     private int blockMinB = 1;   // Tiempo 2: bloques 2, 4, 6...
+    private int blockSecA = 0;   // segundos extra de Tiempo 1 (0, 15, 25, 30, 40)
+    private int blockSecB = 0;   // segundos extra de Tiempo 2
     private int exercises = 1;
 
     // --- Estado compartido ---
@@ -95,6 +98,8 @@ public class MainActivity extends Activity {
     private TextView summaryTotal, summaryInterval, detailTotal, detailRounds, detailConfig;
     private TextView captionA, captionB, captionExercises, minusA, valueA, plusA, minusB, valueB, plusB;
     private final TextView[] exCircles = new TextView[5];
+    private final TextView[] secChipsA = new TextView[SEC_OPTIONS.length];
+    private final TextView[] secChipsB = new TextView[SEC_OPTIONS.length];
     private ImageView totalPlay, totalStop, intervalPlay, intervalStop, intervalReset;
     private ProgressBar intervalProgress;
     private LinearLayout historyList;
@@ -122,6 +127,10 @@ public class MainActivity extends Activity {
         history = new HistoryStore(prefs);
         blockMinA = clamp(prefs.getInt("blockMinA", prefs.getInt("blockMin", 1)), MIN_BLOCK_MIN, MAX_BLOCK_MIN);
         blockMinB = clamp(prefs.getInt("blockMinB", blockMinA), MIN_BLOCK_MIN, MAX_BLOCK_MIN);
+        blockSecA = validSec(prefs.getInt("blockSecA", 0));
+        blockSecB = validSec(prefs.getInt("blockSecB", 0));
+        if (blockMinA == 0 && blockSecA == 0) blockMinA = 1;
+        if (blockMinB == 0 && blockSecB == 0) blockMinB = 1;
         exercises = clamp(prefs.getInt("exercises", 1), 1, 5);
         blockRemainingMs = blockLenMs(0);
 
@@ -160,6 +169,8 @@ public class MainActivity extends Activity {
 
         setupEdgeToEdge();
         buildExerciseCircles();
+        buildSecondChips(findViewById(R.id.secRowA), secChipsA, true);
+        buildSecondChips(findViewById(R.id.secRowB), secChipsB, false);
 
         // Los dos contadores comparten play/pausa y finalizar.
         totalPlay.setOnClickListener(v -> togglePlay());
@@ -244,6 +255,26 @@ public class MainActivity extends Activity {
         }
     }
 
+    private void buildSecondChips(LinearLayout row, TextView[] chips, boolean first) {
+        for (int i = 0; i < SEC_OPTIONS.length; i++) {
+            final int sec = SEC_OPTIONS[i];
+            TextView c = new TextView(this);
+            c.setText(String.valueOf(sec));
+            c.setGravity(Gravity.CENTER);
+            c.setTextSize(13);
+            c.setTypeface(Typeface.DEFAULT_BOLD);
+            c.setClickable(true);
+            c.setFocusable(true);
+            c.setContentDescription(sec + " segundos");
+            c.setOnClickListener(v -> toggleSeconds(first, sec));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dp(30), 1f);
+            lp.leftMargin = dp(2);
+            lp.rightMargin = dp(2);
+            row.addView(c, lp);
+            chips[i] = c;
+        }
+    }
+
     @Override
     protected void onResume() {
         super.onResume();
@@ -316,6 +347,8 @@ public class MainActivity extends Activity {
         e.exercises = exercises;
         e.blockMinA = blockMinA;
         e.blockMinB = blockMinB;
+        e.blockSecA = blockSecA;
+        e.blockSecB = blockSecB;
         history.add(e);
 
         render();
@@ -335,14 +368,45 @@ public class MainActivity extends Activity {
     private void changeMinutes(boolean first, int delta) {
         if (state == RUNNING || state == PAUSED) return;
         if (first) {
-            blockMinA = clamp(blockMinA + delta, MIN_BLOCK_MIN, MAX_BLOCK_MIN);
+            int m = clamp(blockMinA + delta, MIN_BLOCK_MIN, MAX_BLOCK_MIN);
+            if (m == 0 && blockSecA == 0) return;   // un bloque no puede durar 0
+            blockMinA = m;
         } else {
-            blockMinB = clamp(blockMinB + delta, MIN_BLOCK_MIN, MAX_BLOCK_MIN);
+            int m = clamp(blockMinB + delta, MIN_BLOCK_MIN, MAX_BLOCK_MIN);
+            if (m == 0 && blockSecB == 0) return;
+            blockMinB = m;
         }
+        saveDurations();
+    }
+
+    /** Elige (o quita, si ya estaba elegido) los segundos extra de un tiempo. */
+    private void toggleSeconds(boolean first, int sec) {
+        if (state == RUNNING || state == PAUSED) return;
+        if (first) {
+            int s = blockSecA == sec ? 0 : sec;
+            if (blockMinA == 0 && s == 0) return;
+            blockSecA = s;
+        } else {
+            int s = blockSecB == sec ? 0 : sec;
+            if (blockMinB == 0 && s == 0) return;
+            blockSecB = s;
+        }
+        saveDurations();
+    }
+
+    private void saveDurations() {
         blockRemainingMs = blockLenMs(0);
-        prefs.edit().putInt("blockMinA", blockMinA).putInt("blockMinB", blockMinB).apply();
+        prefs.edit()
+                .putInt("blockMinA", blockMinA).putInt("blockMinB", blockMinB)
+                .putInt("blockSecA", blockSecA).putInt("blockSecB", blockSecB)
+                .apply();
         renderedColor = -1;
         render();
+    }
+
+    private static int validSec(int s) {
+        for (int o : SEC_OPTIONS) if (o == s) return s;
+        return 0;
     }
 
     private void selectExercises(int n) {
@@ -395,7 +459,9 @@ public class MainActivity extends Activity {
 
     /** Duración del bloque n (0, 1, 2...): alterna Tiempo 1 / Tiempo 2. */
     private long blockLenMs(int n) {
-        return (n % 2 == 0 ? blockMinA : blockMinB) * 60_000L;
+        return n % 2 == 0
+                ? (blockMinA * 60L + blockSecA) * 1000L
+                : (blockMinB * 60L + blockSecB) * 1000L;
     }
 
     /** Índice de color del bloque actual. */
@@ -436,8 +502,8 @@ public class MainActivity extends Activity {
                 : (active ? blockRemainingMs : len);
         intervalTime.setText(formatCountdown(remaining));
         intervalProgress.setProgress((int) (1000 * remaining / len));
-        valueA.setText(blockMinA + " min");
-        valueB.setText(blockMinB + " min");
+        valueA.setText(durationText(blockMinA, blockSecA));
+        valueB.setText(durationText(blockMinB, blockSecB));
 
         if (active) {
             int ex = blocksDone % exercises + 1;
@@ -486,10 +552,14 @@ public class MainActivity extends Activity {
         for (TextView b : new TextView[]{minusA, plusA, minusB, plusB}) {
             styleOption(b, false, bg, fg, fgSoft, true);
         }
-        setEnabled(minusA, blockMinA > MIN_BLOCK_MIN);
+        setEnabled(minusA, blockMinA > 1 || (blockMinA == 1 && blockSecA > 0));
         setEnabled(plusA, blockMinA < MAX_BLOCK_MIN);
-        setEnabled(minusB, blockMinB > MIN_BLOCK_MIN);
+        setEnabled(minusB, blockMinB > 1 || (blockMinB == 1 && blockSecB > 0));
         setEnabled(plusB, blockMinB < MAX_BLOCK_MIN);
+        for (int i = 0; i < SEC_OPTIONS.length; i++) {
+            styleOption(secChipsA[i], SEC_OPTIONS[i] == blockSecA, bg, fg, fgSoft, false);
+            styleOption(secChipsB[i], SEC_OPTIONS[i] == blockSecB, bg, fg, fgSoft, false);
+        }
         for (int i = 0; i < 5; i++) {
             styleOption(exCircles[i], i + 1 == exercises, bg, fg, fgSoft, true);
         }
@@ -506,7 +576,7 @@ public class MainActivity extends Activity {
         summaryInterval.setText(formatCountdown(blockRemainingMs));
         detailTotal.setText(total);
         detailRounds.setText(roundsText(blocksDone, exercises));
-        detailConfig.setText(configText(exercises, blockMinA, blockMinB, blocksDone));
+        detailConfig.setText(configText(exercises, blockMinA, blockSecA, blockMinB, blockSecB, blocksDone));
     }
 
     private void setEnabled(View v, boolean enabled) {
@@ -587,7 +657,8 @@ public class MainActivity extends Activity {
                 14, WHITE, false);
         main.setPadding(0, dp(4), 0, 0);
         texts.addView(main);
-        TextView cfg = text(configText(e.exercises, e.blockMinA, e.blockMinB, e.blocks), 12, MUTED, false);
+        TextView cfg = text(configText(e.exercises, e.blockMinA, e.blockSecA, e.blockMinB, e.blockSecB, e.blocks),
+                12, MUTED, false);
         cfg.setPadding(0, dp(2), 0, 0);
         texts.addView(cfg);
         card.addView(texts, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
@@ -674,13 +745,20 @@ public class MainActivity extends Activity {
         return r;
     }
 
-    private static String configText(int exercises, int minA, int minB, int blocks) {
-        String times = minA == minB
-                ? String.format(Locale.US, "bloques de %d min", minA)
-                : String.format(Locale.US, "bloques de %d y %d min", minA, minB);
+    private static String configText(int exercises, int minA, int secA, int minB, int secB, int blocks) {
+        String a = durationText(minA, secA);
+        String b = durationText(minB, secB);
+        String times = a.equals(b) ? "bloques de " + a : "bloques de " + a + " y " + b;
         return String.format(Locale.US, "%d %s · %s · %d %s",
                 exercises, exercises == 1 ? "ejercicio" : "ejercicios", times,
                 blocks, blocks == 1 ? "bloque completo" : "bloques completos");
+    }
+
+    /** Duración configurada: "2 min", "40 seg" o "1:30". */
+    private static String durationText(int min, int sec) {
+        if (sec == 0) return min + " min";
+        if (min == 0) return sec + " seg";
+        return String.format(Locale.US, "%d:%02d", min, sec);
     }
 
     /** Tiempo total: 05:23 o 1:05:23. */
