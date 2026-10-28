@@ -214,6 +214,16 @@
                 android:layout_marginTop="8dp"
                 android:textColor="@color/muted"
                 android:textSize="13sp" />
+
+            <!-- Vuelve todo a cero sin borrar el historial -->
+            <ImageView
+                android:id="@+id/summaryReset"
+                style="@style/IconButton"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="14dp"
+                android:contentDescription="Nueva rutina (el historial se conserva)"
+                android:src="@drawable/ic_replay" />
         </LinearLayout>
 
         <ImageView

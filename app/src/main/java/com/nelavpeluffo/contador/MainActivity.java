@@ -178,6 +178,11 @@ public class MainActivity extends Activity {
         intervalStop.setOnClickListener(v -> finishRoutine());
         intervalReset.setOnClickListener(v -> resetBlock());
 
+        ImageView summaryReset = findViewById(R.id.summaryReset);
+        summaryReset.setBackground(shape(TOTAL_ACCENT, 0, false));
+        summaryReset.setImageTintList(ColorStateList.valueOf(DARK));
+        summaryReset.setOnClickListener(v -> clearRoutine());
+
         minusA.setOnClickListener(v -> changeMinutes(true, -1));
         plusA.setOnClickListener(v -> changeMinutes(true, +1));
         minusB.setOnClickListener(v -> changeMinutes(false, -1));
@@ -326,6 +331,20 @@ public class MainActivity extends Activity {
         e.durB = durB;
         history.add(e);
 
+        render();
+    }
+
+    /**
+     * Después de finalizar: deja los dos contadores en cero para empezar
+     * otra rutina (u otro día). El historial no se toca.
+     */
+    private void clearRoutine() {
+        if (state != FINISHED) return;
+        state = IDLE;
+        totalAccumMs = 0;
+        blocksDone = 0;
+        blockRemainingMs = blockLenMs(0);
+        lastBeepSecond = -1;
         render();
     }
 

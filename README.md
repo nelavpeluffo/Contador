@@ -26,7 +26,9 @@ Los textos, números y botones cambian de color para leerse bien sobre cada fond
 
 ## Al finalizar
 
-La mitad de arriba muestra los dos cronómetros uno al lado del otro y debajo el detalle: tiempo total y rondas. Con ▶ arranca una rutina nueva.
+La mitad de arriba muestra los dos cronómetros uno al lado del otro y debajo el detalle: tiempo total y rondas. La rutina queda guardada en el historial.
+
+Debajo del resumen está el botón **↺**: deja los dos contadores en cero para empezar otra rutina u otro día, **sin borrar el historial**. También se puede arrancar directamente una rutina nueva con ▶.
 
 ## Historial (menú ☰)
 
