@@ -37,7 +37,7 @@ import java.util.Locale;
  *  - Abajo: bloques que se repiten solos, alternando dos duraciones
  *    (Tiempo 1 y Tiempo 2, en minutos).
  *
- * Con 1 ejercicio, cada bloque alterna el fondo turquesa / turquesa 15% más oscuro.
+ * Con 1 ejercicio, cada bloque alterna el fondo turquesa / azul.
  * Con 2 a 5 ejercicios, cada bloque es el ejercicio siguiente (cada uno con su color)
  * y una ronda se completa al terminar el último.
  *
@@ -59,9 +59,9 @@ public class MainActivity extends Activity {
     private static final int IDLE = 0, RUNNING = 1, PAUSED = 2, FINISHED = 3;
 
     // Fondo y color de texto de cada bloque.
-    // 0 = turquesa, 1 = el mismo turquesa con 15% menos de luminosidad.
-    private static final int[] BLOCK_BG = {0xFF2DD4BF, 0xFF1F9687, 0xFFFBBF24, 0xFFFB7185, 0xFF7C3AED};
-    private static final int[] BLOCK_FG = {0xFF042F2B, 0xFFFFFFFF, 0xFF2B1B00, 0xFF3B0A14, 0xFFFFFFFF};
+    // 0 = turquesa, 1 = azul (el mismo del botón de pausa de arriba).
+    private static final int[] BLOCK_BG = {0xFF2DD4BF, 0xFF60A5FA, 0xFFFBBF24, 0xFFFB7185, 0xFF7C3AED};
+    private static final int[] BLOCK_FG = {0xFF042F2B, 0xFF0B1A33, 0xFF2B1B00, 0xFF3B0A14, 0xFFFFFFFF};
 
     private static final int TOTAL_ACCENT = 0xFF60A5FA;
     private static final int DARK = 0xFF0B0E13;

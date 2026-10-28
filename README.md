@@ -19,8 +19,8 @@ Tocar los números grandes también inicia o pausa.
 
 Antes de empezar se elige la duración del bloque y cuántos ejercicios distintos tiene la rutina:
 
-- **1 ejercicio:** cada bloque terminado cambia el fondo entre **turquesa** y **turquesa 15 % más oscuro**, para ver fácil cuándo cambiar la intensidad. Cada bloque cuenta como una ronda.
-- **2 a 5 ejercicios:** cada bloque es el ejercicio siguiente, con su propio color (turquesa, turquesa oscuro, amarillo, rosa, violeta). La ronda se completa al terminar el último ejercicio.
+- **1 ejercicio:** cada bloque terminado cambia el fondo entre **turquesa** y **azul** (el mismo del botón de pausa), para ver fácil cuándo cambiar la intensidad. Cada bloque cuenta como una ronda.
+- **2 a 5 ejercicios:** cada bloque es el ejercicio siguiente, con su propio color (turquesa, azul, amarillo, rosa, violeta). La ronda se completa al terminar el último ejercicio.
 
 Los textos, números y botones cambian de color para leerse bien sobre cada fondo.
 
