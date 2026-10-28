@@ -18,7 +18,8 @@ final class HistoryStore {
         long totalMs;     // tiempo total cronometrado
         int blocks;       // bloques completos
         int exercises;    // ejercicios por ronda
-        int blockMin;     // minutos por bloque
+        int blockMinA;    // minutos de los bloques impares (Tiempo 1)
+        int blockMinB;    // minutos de los bloques pares (Tiempo 2)
     }
 
     private static final String KEY = "history";
@@ -41,7 +42,9 @@ final class HistoryStore {
                 e.totalMs = o.optLong("totalMs");
                 e.blocks = o.optInt("blocks");
                 e.exercises = Math.max(1, o.optInt("exercises", 1));
-                e.blockMin = Math.max(1, o.optInt("blockMin", 1));
+                int old = Math.max(1, o.optInt("blockMin", 1));
+                e.blockMinA = Math.max(1, o.optInt("blockMinA", old));
+                e.blockMinB = Math.max(1, o.optInt("blockMinB", e.blockMinA));
                 out.add(e);
             }
         } catch (JSONException ignored) {
@@ -72,7 +75,8 @@ final class HistoryStore {
                 o.put("totalMs", e.totalMs);
                 o.put("blocks", e.blocks);
                 o.put("exercises", e.exercises);
-                o.put("blockMin", e.blockMin);
+                o.put("blockMinA", e.blockMinA);
+                o.put("blockMinB", e.blockMinB);
                 arr.put(o);
             }
         } catch (JSONException ignored) {

@@ -34,7 +34,8 @@ import java.util.Locale;
 /**
  * Pantalla dividida en dos contadores sincronizados:
  *  - Arriba: tiempo total de la rutina.
- *  - Abajo: bloques de N minutos que se repiten solos.
+ *  - Abajo: bloques que se repiten solos, alternando dos duraciones
+ *    (Tiempo 1 y Tiempo 2, en minutos).
  *
  * Con 1 ejercicio, cada bloque alterna el fondo turquesa / turquesa 15% más oscuro.
  * Con 2 a 5 ejercicios, cada bloque es el ejercicio siguiente (cada uno con su color)
@@ -74,7 +75,8 @@ public class MainActivity extends Activity {
     };
 
     // --- Configuración ---
-    private int blockMin = 1;
+    private int blockMinA = 1;   // Tiempo 1: bloques 1, 3, 5...
+    private int blockMinB = 1;   // Tiempo 2: bloques 2, 4, 6...
     private int exercises = 1;
 
     // --- Estado compartido ---
@@ -91,7 +93,7 @@ public class MainActivity extends Activity {
     private View topHalf, topRunning, topSummary, bottomHalf, configBox, scrim, drawer;
     private TextView totalTime, intervalTime, exerciseLabel, roundLabel;
     private TextView summaryTotal, summaryInterval, detailTotal, detailRounds, detailConfig;
-    private TextView captionDuration, captionExercises, minMinus, minValue, minPlus;
+    private TextView captionA, captionB, captionExercises, minusA, valueA, plusA, minusB, valueB, plusB;
     private final TextView[] exCircles = new TextView[5];
     private ImageView totalPlay, totalStop, intervalPlay, intervalStop, intervalReset;
     private ProgressBar intervalProgress;
@@ -118,9 +120,10 @@ public class MainActivity extends Activity {
 
         prefs = getSharedPreferences("config", MODE_PRIVATE);
         history = new HistoryStore(prefs);
-        blockMin = clamp(prefs.getInt("blockMin", 1), MIN_BLOCK_MIN, MAX_BLOCK_MIN);
+        blockMinA = clamp(prefs.getInt("blockMinA", prefs.getInt("blockMin", 1)), MIN_BLOCK_MIN, MAX_BLOCK_MIN);
+        blockMinB = clamp(prefs.getInt("blockMinB", blockMinA), MIN_BLOCK_MIN, MAX_BLOCK_MIN);
         exercises = clamp(prefs.getInt("exercises", 1), 1, 5);
-        blockRemainingMs = blockLenMs();
+        blockRemainingMs = blockLenMs(0);
 
         topHalf = findViewById(R.id.topHalf);
         topRunning = findViewById(R.id.topRunning);
@@ -139,11 +142,15 @@ public class MainActivity extends Activity {
         detailTotal = findViewById(R.id.detailTotal);
         detailRounds = findViewById(R.id.detailRounds);
         detailConfig = findViewById(R.id.detailConfig);
-        captionDuration = findViewById(R.id.captionDuration);
+        captionA = findViewById(R.id.captionA);
+        captionB = findViewById(R.id.captionB);
         captionExercises = findViewById(R.id.captionExercises);
-        minMinus = findViewById(R.id.minMinus);
-        minValue = findViewById(R.id.minValue);
-        minPlus = findViewById(R.id.minPlus);
+        minusA = findViewById(R.id.minusA);
+        valueA = findViewById(R.id.valueA);
+        plusA = findViewById(R.id.plusA);
+        minusB = findViewById(R.id.minusB);
+        valueB = findViewById(R.id.valueB);
+        plusB = findViewById(R.id.plusB);
         totalPlay = findViewById(R.id.totalPlay);
         totalStop = findViewById(R.id.totalStop);
         intervalPlay = findViewById(R.id.intervalPlay);
@@ -163,8 +170,10 @@ public class MainActivity extends Activity {
         intervalStop.setOnClickListener(v -> finishRoutine());
         intervalReset.setOnClickListener(v -> resetBlock());
 
-        minMinus.setOnClickListener(v -> changeMinutes(-1));
-        minPlus.setOnClickListener(v -> changeMinutes(+1));
+        minusA.setOnClickListener(v -> changeMinutes(true, -1));
+        plusA.setOnClickListener(v -> changeMinutes(true, +1));
+        minusB.setOnClickListener(v -> changeMinutes(false, -1));
+        plusB.setOnClickListener(v -> changeMinutes(false, +1));
 
         findViewById(R.id.menuButton).setOnClickListener(v -> openDrawer());
         findViewById(R.id.drawerClose).setOnClickListener(v -> closeDrawer());
@@ -275,7 +284,7 @@ public class MainActivity extends Activity {
                 // Rutina nueva desde cero.
                 totalAccumMs = 0;
                 blocksDone = 0;
-                blockRemainingMs = blockLenMs();
+                blockRemainingMs = blockLenMs(0);
                 lastBeepSecond = -1;
                 startedAtWall = System.currentTimeMillis();
             }
@@ -305,7 +314,8 @@ public class MainActivity extends Activity {
         e.totalMs = totalAccumMs;
         e.blocks = blocksDone;
         e.exercises = exercises;
-        e.blockMin = blockMin;
+        e.blockMinA = blockMinA;
+        e.blockMinB = blockMinB;
         history.add(e);
 
         render();
@@ -314,7 +324,7 @@ public class MainActivity extends Activity {
     /** Reiniciar solo el bloque de abajo; el tiempo total sigue. */
     private void resetBlock() {
         if (state != RUNNING && state != PAUSED) return;
-        blockRemainingMs = blockLenMs();
+        blockRemainingMs = blockLenMs(blocksDone);
         if (state == RUNNING) {
             blockEndsAt = SystemClock.elapsedRealtime() + blockRemainingMs;
         }
@@ -322,11 +332,15 @@ public class MainActivity extends Activity {
         render();
     }
 
-    private void changeMinutes(int delta) {
+    private void changeMinutes(boolean first, int delta) {
         if (state == RUNNING || state == PAUSED) return;
-        blockMin = clamp(blockMin + delta, MIN_BLOCK_MIN, MAX_BLOCK_MIN);
-        blockRemainingMs = blockLenMs();
-        prefs.edit().putInt("blockMin", blockMin).apply();
+        if (first) {
+            blockMinA = clamp(blockMinA + delta, MIN_BLOCK_MIN, MAX_BLOCK_MIN);
+        } else {
+            blockMinB = clamp(blockMinB + delta, MIN_BLOCK_MIN, MAX_BLOCK_MIN);
+        }
+        blockRemainingMs = blockLenMs(0);
+        prefs.edit().putInt("blockMinA", blockMinA).putInt("blockMinB", blockMinB).apply();
         renderedColor = -1;
         render();
     }
@@ -353,13 +367,13 @@ public class MainActivity extends Activity {
         long now = SystemClock.elapsedRealtime();
         long remaining = blockEndsAt - now;
         if (remaining <= 0) {
-            long len = blockLenMs();
             boolean roundDone = false;
             while (remaining <= 0) {
-                blockEndsAt += len;
-                remaining += len;
                 blocksDone++;
                 if (blocksDone % exercises == 0) roundDone = true;
+                long len = blockLenMs(blocksDone);
+                blockEndsAt += len;
+                remaining += len;
             }
             lastBeepSecond = -1;
             signalBlockEnd(roundDone && exercises > 1);
@@ -379,8 +393,9 @@ public class MainActivity extends Activity {
         return state == RUNNING || state == PAUSED;
     }
 
-    private long blockLenMs() {
-        return blockMin * 60_000L;
+    /** Duración del bloque n (0, 1, 2...): alterna Tiempo 1 / Tiempo 2. */
+    private long blockLenMs(int n) {
+        return (n % 2 == 0 ? blockMinA : blockMinB) * 60_000L;
     }
 
     /** Índice de color del bloque actual. */
@@ -416,12 +431,13 @@ public class MainActivity extends Activity {
         }
 
         // --- Abajo ---
-        long len = blockLenMs();
+        long len = blockLenMs(active ? blocksDone : 0);
         long remaining = state == RUNNING ? Math.max(0, blockEndsAt - now)
                 : (active ? blockRemainingMs : len);
         intervalTime.setText(formatCountdown(remaining));
         intervalProgress.setProgress((int) (1000 * remaining / len));
-        minValue.setText(blockMin + " min");
+        valueA.setText(blockMinA + " min");
+        valueB.setText(blockMinB + " min");
 
         if (active) {
             int ex = blocksDone % exercises + 1;
@@ -452,9 +468,11 @@ public class MainActivity extends Activity {
         intervalTime.setTextColor(fg);
         exerciseLabel.setTextColor(fg);
         roundLabel.setTextColor(withAlpha(fg, 0xCC));
-        captionDuration.setTextColor(withAlpha(fg, 0xB3));
+        captionA.setTextColor(withAlpha(fg, 0xB3));
+        captionB.setTextColor(withAlpha(fg, 0xB3));
         captionExercises.setTextColor(withAlpha(fg, 0xB3));
-        minValue.setTextColor(fg);
+        valueA.setTextColor(fg);
+        valueB.setTextColor(fg);
         intervalProgress.setProgressTintList(ColorStateList.valueOf(fg));
         intervalProgress.setProgressBackgroundTintList(ColorStateList.valueOf(withAlpha(fg, 0x33)));
 
@@ -465,10 +483,13 @@ public class MainActivity extends Activity {
         intervalReset.setBackground(shape(0, fgSoft, false));
         intervalReset.setImageTintList(ColorStateList.valueOf(fg));
 
-        styleOption(minMinus, false, bg, fg, fgSoft, true);
-        styleOption(minPlus, false, bg, fg, fgSoft, true);
-        setEnabled(minMinus, blockMin > MIN_BLOCK_MIN);
-        setEnabled(minPlus, blockMin < MAX_BLOCK_MIN);
+        for (TextView b : new TextView[]{minusA, plusA, minusB, plusB}) {
+            styleOption(b, false, bg, fg, fgSoft, true);
+        }
+        setEnabled(minusA, blockMinA > MIN_BLOCK_MIN);
+        setEnabled(plusA, blockMinA < MAX_BLOCK_MIN);
+        setEnabled(minusB, blockMinB > MIN_BLOCK_MIN);
+        setEnabled(plusB, blockMinB < MAX_BLOCK_MIN);
         for (int i = 0; i < 5; i++) {
             styleOption(exCircles[i], i + 1 == exercises, bg, fg, fgSoft, true);
         }
@@ -485,7 +506,7 @@ public class MainActivity extends Activity {
         summaryInterval.setText(formatCountdown(blockRemainingMs));
         detailTotal.setText(total);
         detailRounds.setText(roundsText(blocksDone, exercises));
-        detailConfig.setText(configText(exercises, blockMin, blocksDone));
+        detailConfig.setText(configText(exercises, blockMinA, blockMinB, blocksDone));
     }
 
     private void setEnabled(View v, boolean enabled) {
@@ -566,7 +587,7 @@ public class MainActivity extends Activity {
                 14, WHITE, false);
         main.setPadding(0, dp(4), 0, 0);
         texts.addView(main);
-        TextView cfg = text(configText(e.exercises, e.blockMin, e.blocks), 12, MUTED, false);
+        TextView cfg = text(configText(e.exercises, e.blockMinA, e.blockMinB, e.blocks), 12, MUTED, false);
         cfg.setPadding(0, dp(2), 0, 0);
         texts.addView(cfg);
         card.addView(texts, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
@@ -653,9 +674,12 @@ public class MainActivity extends Activity {
         return r;
     }
 
-    private static String configText(int exercises, int blockMin, int blocks) {
-        return String.format(Locale.US, "%d %s de %d min · %d %s",
-                exercises, exercises == 1 ? "ejercicio" : "ejercicios", blockMin,
+    private static String configText(int exercises, int minA, int minB, int blocks) {
+        String times = minA == minB
+                ? String.format(Locale.US, "bloques de %d min", minA)
+                : String.format(Locale.US, "bloques de %d y %d min", minA, minB);
+        return String.format(Locale.US, "%d %s · %s · %d %s",
+                exercises, exercises == 1 ? "ejercicio" : "ejercicios", times,
                 blocks, blocks == 1 ? "bloque completo" : "bloques completos");
     }
 
@@ -725,7 +749,7 @@ public class MainActivity extends Activity {
         startedAtWall = in.getLong("startedAtWall");
         totalAccumMs = in.getLong("totalAccumMs");
         totalStartedAt = in.getLong("totalStartedAt");
-        blockRemainingMs = in.getLong("blockRemainingMs", blockLenMs());
+        blockRemainingMs = in.getLong("blockRemainingMs", blockLenMs(0));
         blockEndsAt = in.getLong("blockEndsAt");
         blocksDone = in.getInt("blocksDone");
     }

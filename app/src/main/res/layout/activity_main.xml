@@ -304,41 +304,107 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:gravity="center_vertical"
                 android:orientation="horizontal">
 
-                <TextView
-                    android:id="@+id/captionDuration"
-                    style="@style/SmallCaption"
-                    android:layout_width="84dp"
-                    android:text="DURACIÓN" />
-
-                <TextView
-                    android:id="@+id/minMinus"
-                    style="@style/PillButton"
-                    android:layout_width="40dp"
-                    android:contentDescription="Un minuto menos"
-                    android:text="−"
-                    android:textSize="22sp" />
-
-                <TextView
-                    android:id="@+id/minValue"
+                <LinearLayout
                     android:layout_width="0dp"
-                    android:layout_height="40dp"
+                    android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:fontFeatureSettings="tnum"
-                    android:gravity="center"
-                    android:text="1 min"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
+                    android:layout_marginEnd="10dp"
+                    android:orientation="vertical">
 
-                <TextView
-                    android:id="@+id/minPlus"
-                    style="@style/PillButton"
-                    android:layout_width="40dp"
-                    android:contentDescription="Un minuto más"
-                    android:text="+"
-                    android:textSize="22sp" />
+                    <TextView
+                        android:id="@+id/captionA"
+                        style="@style/SmallCaption"
+                        android:layout_gravity="center_horizontal"
+                        android:layout_marginBottom="4dp"
+                        android:text="TIEMPO 1" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:id="@+id/minusA"
+                            style="@style/PillButton"
+                            android:layout_width="40dp"
+                            android:contentDescription="Un minuto menos"
+                            android:text="−"
+                            android:textSize="22sp" />
+
+                        <TextView
+                            android:id="@+id/valueA"
+                            android:layout_width="0dp"
+                            android:layout_height="40dp"
+                            android:layout_weight="1"
+                            android:fontFeatureSettings="tnum"
+                            android:gravity="center"
+                            android:maxLines="1"
+                            android:text="1 min"
+                            android:textSize="17sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/plusA"
+                            style="@style/PillButton"
+                            android:layout_width="40dp"
+                            android:contentDescription="Un minuto más"
+                            android:text="+"
+                            android:textSize="22sp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="10dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/captionB"
+                        style="@style/SmallCaption"
+                        android:layout_gravity="center_horizontal"
+                        android:layout_marginBottom="4dp"
+                        android:text="TIEMPO 2" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:id="@+id/minusB"
+                            style="@style/PillButton"
+                            android:layout_width="40dp"
+                            android:contentDescription="Un minuto menos"
+                            android:text="−"
+                            android:textSize="22sp" />
+
+                        <TextView
+                            android:id="@+id/valueB"
+                            android:layout_width="0dp"
+                            android:layout_height="40dp"
+                            android:layout_weight="1"
+                            android:fontFeatureSettings="tnum"
+                            android:gravity="center"
+                            android:maxLines="1"
+                            android:text="1 min"
+                            android:textSize="17sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/plusB"
+                            style="@style/PillButton"
+                            android:layout_width="40dp"
+                            android:contentDescription="Un minuto más"
+                            android:text="+"
+                            android:textSize="22sp" />
+                    </LinearLayout>
+                </LinearLayout>
             </LinearLayout>
 
             <LinearLayout
