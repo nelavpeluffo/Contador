@@ -3,7 +3,7 @@
 App de Android para rutinas de ejercicio, con la pantalla dividida en dos contadores sincronizados:
 
 - **Arriba – Tiempo total** de la rutina.
-- **Abajo – Bloques** que se repiten solos, alternando dos duraciones: **Tiempo 1** (bloques 1, 3, 5…) y **Tiempo 2** (bloques 2, 4, 6…). Cada una se elige en minutos (de 1 a 60) con − y +.
+- **Abajo – Bloques** que se repiten solos, alternando dos duraciones: **Tiempo 1** (bloques 1, 3, 5…) y **Tiempo 2** (bloques 2, 4, 6…). Cada una se elige con − y +, que recorren 15 seg → 25 seg → 30 seg → 40 seg → 1 min → 2 min → … → 60 min.
 
 ## Botones
 
