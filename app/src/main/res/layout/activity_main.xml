@@ -330,7 +330,7 @@
                             android:id="@+id/minusA"
                             style="@style/PillButton"
                             android:layout_width="40dp"
-                            android:contentDescription="Un minuto menos"
+                            android:contentDescription="Menos tiempo"
                             android:text="−"
                             android:textSize="22sp" />
 
@@ -350,17 +350,10 @@
                             android:id="@+id/plusA"
                             style="@style/PillButton"
                             android:layout_width="40dp"
-                            android:contentDescription="Un minuto más"
+                            android:contentDescription="Más tiempo"
                             android:text="+"
                             android:textSize="22sp" />
                     </LinearLayout>
-
-                    <LinearLayout
-                        android:id="@+id/secRowA"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:orientation="horizontal" />
                 </LinearLayout>
 
                 <LinearLayout
@@ -387,7 +380,7 @@
                             android:id="@+id/minusB"
                             style="@style/PillButton"
                             android:layout_width="40dp"
-                            android:contentDescription="Un minuto menos"
+                            android:contentDescription="Menos tiempo"
                             android:text="−"
                             android:textSize="22sp" />
 
@@ -407,17 +400,10 @@
                             android:id="@+id/plusB"
                             style="@style/PillButton"
                             android:layout_width="40dp"
-                            android:contentDescription="Un minuto más"
+                            android:contentDescription="Más tiempo"
                             android:text="+"
                             android:textSize="22sp" />
                     </LinearLayout>
-
-                    <LinearLayout
-                        android:id="@+id/secRowB"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:orientation="horizontal" />
                 </LinearLayout>
             </LinearLayout>
 
